@@ -1,5 +1,7 @@
 # Hopcroft–Karp – viele kürzeste Wege in einer Phase – Streamlit-Demo
 
+**[→ Demo live ausprobieren](https://sebastianhanisch-hopcroft-karp-demo.streamlit.app/)**
+
 Fünftes Stück der **Matching-Linie** der "Konzepte"-Reihe für die Website "Sebastian Hanisch – Operations Research und Machine Learning", Nachfolger der [Verbesserungswege-Demo](https://github.com/sebastian-hanisch/augmenting-path-demo):
 anders als die Fall-Demos im Portfolio (ein Anwendungsfall, mehrere Verfahren im Vergleich) zeigt diese Demo **ein** Verfahren – **Hopcroft–Karp** – an einem wachsenden Beispiel.
 Die Verbesserungswege finden je Suche **einen** Weg; hier findet je **Phase** eine Breitensuche von allen freien Fahrzeugen den Graphen in **Schichten** (sie endet in der ersten Schicht, in der ein freier Auftrag anliegt), und eine Tiefensuche im Schichtgraphen liefert eine **maximale Menge knotendisjunkter kürzester Wege**, die alle auf einmal umgeklappt werden. Die Weglängen wachsen von Phase zu Phase; es sind höchstens etwa √V Phasen.
