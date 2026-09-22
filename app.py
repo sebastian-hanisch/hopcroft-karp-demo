@@ -106,7 +106,7 @@ Wichtig für die Einordnung: das Bündeln lohnt sich erst bei **großen** Karten
 st.caption(
     "Anders als die Fall-Demos im Portfolio, die an einem Anwendungsfall mehrere Verfahren vergleichen, zeigt diese Demo - fünftes Stück der Matching-Linie der \"Konzepte\"-Reihe, Nachfolger der Verbesserungswege - **ein** Verfahren an einem wachsenden Beispiel. "
     "Hopcroft–Karp zählt **Paare, nicht Kosten**: es findet dieselben Wege wie die einzelnen kürzesten Wege der Verbesserungswege-Demo und damit auch dieselben Kosten; die Kosten optimiert die Ungarische Methode (und, dezentral, der Auktionsalgorithmus) - beide sind schon gebaut. "
-    "Die Schwächen dieses Stücks sind die Ansatzpunkte der nächsten: **Blossom** und **Gewichteter Blossom** (allgemeine Graphen), **Gale–Shapley** (Vorlieben statt Kosten) und **Online-Matching** - noch nicht gebaut."
+    "Die Schwächen dieses Stücks sind die Ansatzpunkte der nächsten: **Blossom** und **Gewichteter Blossom** (allgemeine Graphen), **Gale–Shapley** (Vorlieben statt Kosten) und **Online-Matching** - alle inzwischen gebaut."
 )
 
 with st.expander("So funktioniert Hopcroft–Karp", expanded=True):
@@ -372,7 +372,7 @@ st.markdown(
 | **Die Karte ist groß** | Bei 20 × 20 Fahrzeugen sucht das Bündeln im Mittel nicht weniger (auf 40 × 40 mit Reichweite 60 schon): der Vorteil zeigt sich zuverlässig erst bei über hundert Fahrzeugen. Die Phasenschranke √V ist eine Schranke: auf Zufallskarten wachsen die Phasen tatsächlich etwa mit √n, auf der Treppe genau. | größere Karten (Aufwand-Experiment oben) |
 """
 )
-st.caption("Die Nachbarn der Matching-Linie (noch nicht gebaut): Blossom, Gewichteter Blossom, Gale–Shapley, Stabile Mitbewohner und Online-Matching. Bereits gebaut: die Wurzel (Greedy-Matching), die Verbesserungswege, die Ungarische Methode, der Auktionsalgorithmus und diese Demo.")
+st.caption("Die Matching-Linie ist inzwischen vollständig gebaut (13 Stücke): die Wurzel (Greedy-Matching), die Verbesserungswege, die Ungarische Methode, der Auktionsalgorithmus, diese Demo, Blossom, Gewichteter Blossom, Gale–Shapley, Stabile Mitbewohner, Krankenhaus-Zulassung, Top Trading Cycles, Nierentausch und Online-Matching.")
 
 st.markdown("---")
 
