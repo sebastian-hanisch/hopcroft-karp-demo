@@ -8,7 +8,7 @@ Die Verbesserungswege finden je Suche **einen** Weg; hier findet je **Phase** ei
 
 Die Demo ist **ehrlich über den Aufwand**: bei den Demogrößen (20 × 20) ist das Bündeln nicht schneller als die einzelnen Wege der Vorgänger-Demo, der Vorteil zeigt sich erst bei über hundert Fahrzeugen (Aufwand-Experiment). Hopcroft–Karp zählt **Paare, nicht Kosten**: es findet dieselben Wege wie die einzelnen kürzesten Wege und damit auch dieselben Kosten.
 
-**Einordnung in die Reihe (die Kanten des Graphen):** dieses Stück behebt die Schwäche der Verbesserungswege, dass jede Suche nur einen Weg findet. Seine eigenen Schwächen sind die Ansatzpunkte der nächsten: es gibt nur zwei getrennte Seiten (**Blossom → Gewichteter Blossom**), Vorlieben statt Zählung (**Gale–Shapley**), alles ist vorab bekannt (**Online-Matching**). Die Kosten optimieren die Ungarische Methode und der Auktionsalgorithmus.
+**Einordnung in die Reihe (die Kanten des Graphen):** dieses Stück behebt die Schwäche der Verbesserungswege, dass jede Suche nur einen Weg findet. Seine eigenen Schwächen sind die Ansatzpunkte der nächsten: der Graph hat nur zwei Seiten, er ist bipartit (**Blossom → Gewichteter Blossom** für Graphen ohne diese Annahme), Vorlieben statt Zählung (**Gale–Shapley**), alles ist vorab bekannt (**Online-Matching**). Die Kosten optimieren die Ungarische Methode und der Auktionsalgorithmus.
 ```
 greedy-matching-demo (Wurzel: eine gewählte Zuordnung bleibt)                     [gebaut]
   ├─ augmenting-path-demo (Verbesserungswege: Paare optimal, Kosten blind)        [gebaut]
@@ -50,6 +50,7 @@ Jede hier genannte Zahl ist in `tests/test_claims.py` über die 100 festen Karte
 
 - **Phasen in Aktion:** Schritt-Slider und ▶️ über alle Bilder: je Phase der **Schichtgraph** (links die Karte mit farbigen Schichten, rechts das Schichtschema), dann je akzeptiertem Weg ein Bild (grün: wird gewählt, rot gestrichelt: wird freigegeben, gesperrte Fahrzeuge umringt, Sackgassen der Tiefensuche gekreuzt); das letzte Bild ist das Ergebnis mit dem **Beweis** (Knotenüberdeckung). Umschalter Start: leer oder von Greedy.
 - **Größtmöglich – und was kostet die Suche?** Ergebnis, Vergleichstabelle (Hopcroft–Karp, einzelne kürzeste Wege, Kuhn), Verteilung über 100 feste Karten (Histogramm, Mittel und Median, Anteil der Karten mit weniger Kanten), Aufwandstabelle; auf Abruf Reichweite-Sweep.
+- **Zwei Darstellungen desselben Graphen:** als Karte oder als **bipartiter Graph** (Fahrzeuge links, Aufträge rechts, jede Kante wechselt die Seite); Schichten, Wege und Paare sind in beiden dieselben, das Schichtschema bleibt unverändert.
 - **Aufwand:** 10 bis 320 Fahrzeuge bei konstantem mittleren Grad mit Steigungen und Kreuzung, das Phasenwachstum gegen die Treppe, die Worst-Case-Treppe und der Vergleich der Varianten (ohne Sackgassen, volle Schicht).
 - **Feste Lehrbuchkarten** (Nichts zu verbessern, drei Pfade in einer Phase, lange Kette, Treppe) und zufällige Karten; **Wo die Annahmen enden:** welches spätere Stück an welcher Schwäche ansetzt.
 

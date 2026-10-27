@@ -14,6 +14,8 @@ FIXED_NETS = ("steal", "p4", "paths", "chain", "stair")
 
 START_LABELS = {"empty": "Leer", "edge": "Von Greedy (billigste Kante zuerst)"}
 DEFAULT_START = "edge"
+LAYOUT_LABELS = {"map": "Karte", "bipartit": "Zwei Seiten"}
+DEFAULT_LAYOUT = "map"
 
 # --- feste Seed-Mengen (dieselben wie in den Vorgängerdemos; unabhängig vom Nutzer-Seed) --------------------------------------------
 DIST_SEEDS = tuple(range(100000, 100100))
@@ -28,7 +30,7 @@ COLORS = {"matched": "#1f77b4", "add": "#2ca02c", "drop": "#d62728", "common": "
           "hk": "#d62728", "single": "#1f77b4", "kuhn": "#2ca02c", "layers": "Viridis"}
 
 # --- Presets ------------------------------------------------------------------------------------------------------------------
-_BASE = dict(net="random", start=DEFAULT_START, n=DEFAULT_N, m=DEFAULT_M, reach=DEFAULT_REACH, ballung=DEFAULT_BALLUNG, seed=DEFAULT_SEED)
+_BASE = dict(net="random", start=DEFAULT_START, layout=DEFAULT_LAYOUT, n=DEFAULT_N, m=DEFAULT_M, reach=DEFAULT_REACH, ballung=DEFAULT_BALLUNG, seed=DEFAULT_SEED)
 PRESETS = {
     "⚖️ Nichts zu verbessern": {**_BASE, "net": "steal"},
     "🔗 Drei Pfade in einer Phase": {**_BASE, "net": "paths"},

@@ -113,6 +113,8 @@ st.caption(
 with st.expander("So funktioniert Hopcroft–Karp", expanded=True):
     st.markdown(
         """
+**Der Graph.** Fahrzeuge und Aufträge sind die **Ecken**, ein mögliches Paar (das Fahrzeug erreicht den Auftrag in der Reichweite) ist eine **Kante**. Es gibt **zwei Seiten**: Kanten laufen immer von einem Fahrzeug zu einem Auftrag, nie von Fahrzeug zu Fahrzeug oder von Auftrag zu Auftrag. Einen solchen Graphen nennt man **bipartit**. Auf der Karte liegen beide Seiten gemischt; unter **Darstellung → Zwei Seiten** stehen die Fahrzeuge links und die Aufträge rechts, und man sieht, dass jeder Weg die Seiten abwechselt: Fahrzeug, Auftrag, Fahrzeug, Auftrag ...
+
 1. **Phase:** eine **Breitensuche** startet gleichzeitig an allen freien Fahrzeugen (Schicht 0). Ein Fahrzeug der Schicht d erreicht über nicht gewählte Kanten Aufträge und über deren Partner die Fahrzeuge der Schicht d+1. Die Suche endet in der ersten Schicht **L**, in der ein freier Auftrag anliegt: die kürzesten Verbesserungswege haben 2L+1 Kanten.
 2. **Tiefensuche:** von den freien Fahrzeugen aus wird nur durch den **Schichtgraphen** gesucht (immer eine Schicht tiefer). Ein akzeptierter Weg **sperrt** seine Fahrzeuge; ein Fahrzeug, von dem aus es nicht weitergeht, wird als **Sackgasse** markiert und nie wieder betreten. So prüft die Tiefensuche jedes Fahrzeug höchstens einmal je Phase.
 3. **Umklappen:** am Ende der Phase werden **alle** gefundenen Wege umgeklappt - sie sind knotendisjunkt und gleich lang. Danach gibt es keinen Weg der Länge 2L+1 mehr, der nächste ist länger.
@@ -173,7 +175,7 @@ with st.sidebar:
 # --- Phasen in Aktion -----------------------------------------------------------------------------------------------------------------------
 
 st.markdown("## 🎯 Phasen in Aktion")
-step_col, start_col, play_col = st.columns([4, 4, 2])
+step_col, start_col, layout_col, play_col = st.columns([4, 4, 3, 2])
 with start_col:
     start = st.radio("Start", list(C.START_LABELS), key="start_radio", format_func=lambda k: C.START_LABELS[k],
                      help="Von Greedy aus bleiben wenige Phasen. Vom leeren Start klappt die erste Phase viele Wege der Länge 1 auf einmal um (ein Erste-passende-Verfahren, das die Kosten nicht kennt) - dort zeigt sich der Vorteil gegen Kuhn am deutlichsten.")
@@ -197,9 +199,12 @@ with step_col:
     else:
         step = 0
         st.caption("Hier gibt es keine Phase: das Start-Matching hat schon die größtmögliche Paarzahl. Rechts der Beweis dafür.")
+with layout_col:
+    layout = st.radio("Darstellung", list(C.LAYOUT_LABELS), key="layout_radio", format_func=lambda k: C.LAYOUT_LABELS[k], horizontal=True,
+                      help="Karte: Fahrzeuge und Aufträge liegen dort, wo sie auf der Karte sind. Zwei Seiten: dieselben Fahrzeuge links, dieselben Aufträge rechts, jede Kante läuft von einer Seite zur anderen - ein bipartiter Graph. Schichten, Wege und Paare sind in beiden Darstellungen dieselben. Das Schichtschema rechts bleibt, wie es ist.")
 with play_col:
     auto_play = st.button("▶️ Abspielen", width="stretch", disabled=n_frames <= 1)
-sync_query_params({"net_select": net_key, "start_radio": start, "n_slider": int(n), "m_slider": int(m), "reach_slider": int(reach), "ballung_slider": int(ballung), "seed_input": int(seed)})
+sync_query_params({"net_select": net_key, "start_radio": start, "layout_radio": layout, "n_slider": int(n), "m_slider": int(m), "reach_slider": int(reach), "ballung_slider": int(ballung), "seed_input": int(seed)})
 view_slot = st.empty()
 
 
@@ -220,7 +225,7 @@ def _render(k):
         if ph_idx >= len(res.phases):
             c1, c2 = st.columns(2)
             c1.markdown(f"**Ergebnis** - {res.count} Paare, {res.cost} Minuten")
-            c1.plotly_chart(build_cover_map(sc, res.pairs, res.cover_v, res.cover_o), width="stretch", key=f"cover_map_{k}")
+            c1.plotly_chart(build_cover_map(sc, res.pairs, res.cover_v, res.cover_o, layout=layout), width="stretch", key=f"cover_map_{k}")
             c2.markdown("**Beweis:** die Knotenüberdeckung")
             c2.table(_cert_table())
             st.caption(f"Die letzte Breitensuche ({res.final_scanned} durchsuchte Kanten) erreicht keinen freien Auftrag. Die violetten Ecken - {len(res.cover_v)} Fahrzeuge und {len(res.cover_o)} Aufträge - berühren jede mögliche Kante; "
@@ -244,7 +249,7 @@ def _render(k):
                    f"Die Fahrzeuge des Wegs sind gesperrt.")
             if stage == len(ph.paths):
                 cap += (f" Damit ist die Phase fertig: {len(ph.paths)} Weg(e), {ph.tail_scanned} Kanten danach noch vergeblich durchsucht. Alle Wege werden jetzt umgeklappt: {ph.pairs_before} → {ph.pairs_after} Paare.")
-        c1.plotly_chart(build_layer_map(sc, before, ph, stage), width="stretch", key=f"layer_map_{k}")
+        c1.plotly_chart(build_layer_map(sc, before, ph, stage, layout=layout), width="stretch", key=f"layer_map_{k}")
         c2.plotly_chart(build_layer_schematic(sc, before, ph, stage), width="stretch", key=f"schematic_{k}")
         st.caption(cap)
 
@@ -259,7 +264,7 @@ else:
 
 st.plotly_chart(build_phases_bar(res.phases, res.final_scanned), width="stretch", key="phase_chart")
 st.caption("Quadrate sind Fahrzeuge (Farbe: Schicht; hohl grau: von keinem freien Fahrzeug erreicht), Kreise Aufträge (ausgefüllt: haben ein Fahrzeug, hohl: frei). Dunkle Linien: Kanten des Schichtgraphen; blau: gewählte Paare; grün: ein akzeptierter Weg wird gewählt, rot gestrichelt: seine Paare werden freigegeben. "
-           "Grün umringt: Fahrzeuge auf akzeptierten Wegen, violett gekreuzt: Sackgassen der Tiefensuche. Rechts das Schema: Spalte = Schicht. Unten die durchsuchten Kanten je Phase (Breitensuche und Tiefensuche) und der Beweis.")
+           "Grün umringt: Fahrzeuge auf akzeptierten Wegen, violett gekreuzt: Sackgassen der Tiefensuche. Rechts das Schema: Spalte = Schicht (es bleibt in beiden Darstellungen gleich). In der Darstellung „Zwei Seiten“ stehen die Fahrzeuge links und die Aufträge rechts (innerhalb jeder Spalte nach Lage der möglichen Partner geordnet, damit sich wenige Kanten kreuzen); Schichten, Wege und Zahlen sind dieselben wie auf der Karte. Unten die durchsuchten Kanten je Phase (Breitensuche und Tiefensuche) und der Beweis.")
 
 st.markdown("---")
 
@@ -372,7 +377,7 @@ st.markdown(
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
 | **Nur die Paarzahl zählt** | Hopcroft–Karp kennt die Kosten nicht und findet dieselben Wege wie die einzelnen kürzesten Wege: die Kosten liegen im Median 8 % (ab Greedy) bzw. 36 % (vom leeren Start) über dem Optimum. | **Ungarische Methode** und **Auktionsalgorithmus** (beide gebaut) |
-| **Es gibt zwei getrennte Seiten** | Fahrzeuge und Aufträge bilden zwei Gruppen. Sollen sich Fahrer untereinander paaren, gibt es Zyklen ungerader Länge, die der Schichtgraph nicht behandelt. | **Blossom**, dann **Gewichteter Blossom** |
+| **Der Graph ist bipartit (zwei Seiten)** | Kanten gibt es nur zwischen Fahrzeugen und Aufträgen. Soll dagegen jeder mit jedem gepaart werden können, etwa zwei Fahrer, die gemeinsam eine Fahrt übernehmen, kann es Kreise ungerader Länge geben (drei Fahrer, die einander alle erreichen); der Schichtgraph behandelt sie nicht. | **Blossom**, dann **Gewichteter Blossom** |
 | **Beide Seiten sind gleichgültig gegenüber der Zuordnung** | Hopcroft–Karp fragt nicht, ob ein Fahrzeug lieber einen anderen Auftrag hätte. Haben beide Seiten Vorlieben, ist ein stabiles Ergebnis nicht dasselbe wie ein größtmögliches. | **Gale–Shapley** |
 | **Alles ist vorab bekannt** | Aufträge kommen hier alle vor der Rechnung an. Kommen sie nacheinander und sind schon zugesagt, darf nicht mehr umgeklappt werden. | **Online-Matching** |
 | **Die Karte ist groß** | Bei 20 × 20 Fahrzeugen sucht das Bündeln im Mittel nicht weniger (auf 40 × 40 mit Reichweite 60 schon): der Vorteil zeigt sich zuverlässig erst bei über hundert Fahrzeugen. Die Phasenschranke √V ist eine Schranke: auf Zufallskarten wachsen die Phasen tatsächlich etwa mit √n, auf der Treppe genau. | größere Karten (Aufwand-Experiment oben) |

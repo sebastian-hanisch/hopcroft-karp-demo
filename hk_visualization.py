@@ -1,6 +1,8 @@
 """Plotly-Abbildungen von Hopcroft–Karp: Karte mit Schichten und Wegen, Schichtschema, Beweis (Knotenüberdeckung), Phasen, Verteilung, Sweeps, Aufwand, Treppe.
 Achsen sind gesperrt (fixedrange), damit Touch-Geräte beim Scrollen nicht zoomen. Punkte auf einer Geraden werden mit Bögen gezeichnet."""
 
+from dataclasses import replace
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -16,6 +18,50 @@ def lock_axes(fig):
 def _base(fig, height):
     fig.update_layout(height=height, margin=dict(l=10, r=10, t=10, b=10), legend=dict(orientation="h", y=-0.08), plot_bgcolor="rgba(0,0,0,0)")
     return lock_axes(fig)
+
+
+def _two_sided_order(sc, sweeps=4):
+    """Reihenfolge der Ecken in den beiden Spalten (oben nach unten): Start nach Kartenlage, dann abwechselnd jede Seite nach dem Mittel der Plätze ihrer möglichen Partner (weniger Kreuzungen)."""
+    vo = sorted(range(sc.n), key=lambda i: (sc.vehicles[i][1], sc.vehicles[i][0], i))
+    oo = sorted(range(sc.m), key=lambda j: (sc.orders[j][1], sc.orders[j][0], j))
+    for _ in range(sweeps):
+        pv = {i: r for r, i in enumerate(vo)}
+        keys = {}
+        for j in oo:
+            nb = [pv[i] for i in range(sc.n) if sc.feasible[i, j]]
+            keys[j] = sum(nb) / len(nb) if nb else oo.index(j) * (sc.n - 1) / max(sc.m - 1, 1)
+        oo = sorted(oo, key=lambda j: (keys[j], j))
+        po = {j: r for r, j in enumerate(oo)}
+        keys = {}
+        for i in vo:
+            nb = [po[j] for j in range(sc.m) if sc.feasible[i, j]]
+            keys[i] = sum(nb) / len(nb) if nb else vo.index(i) * (sc.m - 1) / max(sc.n - 1, 1)
+        vo = sorted(vo, key=lambda i: (keys[i], i))
+    return vo, oo
+
+
+def arrange(sc, layout):
+    """Karte unverändert; Darstellung "bipartit": Fahrzeuge links, Aufträge rechts, in je einer Spalte. Nur die Koordinaten ändern sich, Kosten und Paare bleiben dieselben."""
+    if layout != "bipartit":
+        return sc
+    vo, oo = _two_sided_order(sc)
+
+    def column(order, x):
+        k = len(order)
+        pos = {e: (x, 100 - 100 * r / (k - 1) if k > 1 else 50) for r, e in enumerate(order)}
+        return tuple(pos[e] for e in range(k))
+
+    return replace(sc, vehicles=column(vo, 0), orders=column(oo, 100))
+
+
+def _small(sc, layout, map_limit=24):
+    """Beschriften wir die Ecken? Auf der Karte bis `map_limit` Ecken, in den Spalten bis 20 je Seite."""
+    return max(sc.n, sc.m) <= 20 if layout == "bipartit" else sc.n + sc.m <= map_limit
+
+
+def _tpos(layout, map_pos, side):
+    """Beschriftungsposition: auf der Karte oben bzw. unten, in den Spalten außen neben der Ecke."""
+    return {"vehicle": "middle left", "order": "middle right"}[side] if layout == "bipartit" else map_pos
 
 
 def _collinear(sc):
@@ -51,7 +97,13 @@ def _feasible_pairs(sc):
     return [(i, j) for i in range(sc.n) for j in range(sc.m) if sc.feasible[i, j]]
 
 
-def _map_layout(fig, sc, height):
+def _map_layout(fig, sc, height, layout="map"):
+    if layout == "bipartit":
+        fig.update_xaxes(visible=False, range=[-32, 132])
+        fig.update_yaxes(visible=False, range=[-6, 116])
+        for x, text in ((0, "Fahrzeuge"), (100, "Aufträge")):
+            fig.add_annotation(x=x, y=110, text=f"<b>{text}</b>", showarrow=False)
+        return _base(fig, max(height, min(800, 22 * max(sc.n, sc.m) + 110)))
     xs = [p[0] for p in sc.vehicles + sc.orders]
     ys = [p[1] for p in sc.vehicles + sc.orders]
     pad = 8
@@ -71,12 +123,12 @@ def _map_layout(fig, sc, height):
     return _base(fig, height)
 
 
-def _vertices(fig, sc, matched_v, matched_o, cover_v=(), cover_o=()):
+def _vertices(fig, sc, matched_v, matched_o, cover_v=(), cover_o=(), layout="map"):
     """Fahrzeuge (Quadrate) und Aufträge (Kreise); ohne Partner nur als Umriss; Ecken der Überdeckung in Violett."""
-    small = sc.n + sc.m <= 16
+    small = _small(sc, layout, 16)
     cover_v, cover_o = set(cover_v), set(cover_o)
-    for kind, pts, matched, cover, symbol, color, prefix, tpos in (("Fahrzeug", sc.vehicles, matched_v, cover_v, "square", C.COLORS["vehicle"], "F", "top center"),
-                                                                    ("Auftrag", sc.orders, matched_o, cover_o, "circle", C.COLORS["order"], "A", "bottom center")):
+    for kind, pts, matched, cover, symbol, color, prefix, tpos in (("Fahrzeug", sc.vehicles, matched_v, cover_v, "square", C.COLORS["vehicle"], "F", _tpos(layout, "top center", "vehicle")),
+                                                                    ("Auftrag", sc.orders, matched_o, cover_o, "circle", C.COLORS["order"], "A", _tpos(layout, "bottom center", "order"))):
         for on, sym, name in ((True, symbol, f"{kind} mit Partner"), (False, symbol + "-open", f"{kind} ohne Partner")):
             idx = [k for k in range(len(pts)) if (k in matched) == on and k not in cover]
             if idx:
@@ -94,16 +146,17 @@ def _vertices(fig, sc, matched_v, matched_o, cover_v=(), cover_o=()):
                 marker=dict(symbol=symbol, size=12, color=C.COLORS["dead"], line=dict(width=2, color="#4b2d73"))))
 
 
-def build_cover_map(sc, pairs, cover_v, cover_o, height=430):
+def build_cover_map(sc, pairs, cover_v, cover_o, height=430, layout="map"):
     """Beweis der Erschöpfung: die violetten Ecken (Knotenüberdeckung) berühren jede mögliche Kante, und es sind genau so viele wie Paare."""
-    curved = _collinear(sc)
+    sc = arrange(sc, layout)
+    curved = layout != "bipartit" and _collinear(sc)
     fig = go.Figure()
     ex, ey = _segments(sc, _feasible_pairs(sc), curved)
     fig.add_trace(go.Scatter(x=ex, y=ey, mode="lines", line=dict(color="rgba(150,150,150,0.4)", width=1), hoverinfo="skip", name="mögliche Paare"))
     px, py = _segments(sc, pairs, curved)
     fig.add_trace(go.Scatter(x=px, y=py, mode="lines", line=dict(color=C.COLORS["matched"], width=3.5), hoverinfo="skip", name="gewählt"))
-    _vertices(fig, sc, {i for i, _ in pairs}, {j for _, j in pairs}, cover_v, cover_o)
-    fig = _map_layout(fig, sc, height)
+    _vertices(fig, sc, {i for i, _ in pairs}, {j for _, j in pairs}, cover_v, cover_o, layout)
+    fig = _map_layout(fig, sc, height, layout)
     fig.update_layout(showlegend=False)          # die Legende würde in schmalen Spalten die Zeichenfläche auf fast null drücken; die Farben stehen in der Erklärung unter der Karte
     return fig
 
@@ -116,10 +169,11 @@ def _dead_upto(phase, stage):
     return dead
 
 
-def build_layer_map(sc, pairs, phase, stage, height=430):
+def build_layer_map(sc, pairs, phase, stage, height=430, layout="map"):
     """Karte vor der Phase: Fahrzeuge nach Schicht eingefärbt (Zahl = Schicht), Kanten des Schichtgraphen dunkel, gewählte Paare blau; nach `stage` akzeptierten Wegen
     diese grün (wird gewählt) und rot gestrichelt (wird freigegeben), Fahrzeuge auf akzeptierten Wegen grün umringt, Sackgassen der Tiefensuche violett gekreuzt."""
-    curved = _collinear(sc)
+    sc = arrange(sc, layout)
+    curved = layout != "bipartit" and _collinear(sc)
     fig = go.Figure()
     ex, ey = _segments(sc, _feasible_pairs(sc), curved)
     fig.add_trace(go.Scatter(x=ex, y=ey, mode="lines", line=dict(color="rgba(150,150,150,0.3)", width=1), hoverinfo="skip", name="mögliche Paare"))
@@ -136,25 +190,26 @@ def build_layer_map(sc, pairs, phase, stage, height=430):
         ax, ay = _segments(sc, adds, curved)
         fig.add_trace(go.Scatter(x=ax, y=ay, mode="lines", line=dict(color=C.COLORS["add"], width=4.5), hoverinfo="skip", name="wird gewählt", showlegend=False))
         on_path.update(p.chain_v)
-    small = sc.n + sc.m <= 24
+    small = _small(sc, layout, 24)
+    tpos_v, tpos_o = _tpos(layout, "top center", "vehicle"), _tpos(layout, "bottom center", "order")
     dist, top = phase.dist, max(phase.L, 1)
     matched_o = {j for _, j in pairs}
     reached = [i for i in range(sc.n) if dist[i] >= 0]
     other = [i for i in range(sc.n) if dist[i] < 0]
     if other:
         fig.add_trace(go.Scatter(x=[sc.vehicles[k][0] for k in other], y=[sc.vehicles[k][1] for k in other], mode="markers+text" if small else "markers", name="Fahrzeug nicht erreicht",
-                                 text=[f"F{k + 1}" for k in other] if small else None, textposition="top center", hovertext=[f"Fahrzeug {k + 1}: von keinem freien Fahrzeug erreicht" for k in other], hoverinfo="text",
+                                 text=[f"F{k + 1}" for k in other] if small else None, textposition=tpos_v, hovertext=[f"Fahrzeug {k + 1}: von keinem freien Fahrzeug erreicht" for k in other], hoverinfo="text",
                                  marker=dict(symbol="square-open", size=10, color="#999", line=dict(width=2, color="#999"))))
     if reached:
         fig.add_trace(go.Scatter(x=[sc.vehicles[k][0] for k in reached], y=[sc.vehicles[k][1] for k in reached], mode="markers+text" if small else "markers", name="Fahrzeug nach Schicht",
-                                 text=[f"F{k + 1}·{dist[k]}" for k in reached] if small else None, textposition="top center",
+                                 text=[f"F{k + 1}·{dist[k]}" for k in reached] if small else None, textposition=tpos_v,
                                  hovertext=[f"Fahrzeug {k + 1}: Schicht {dist[k]}" for k in reached], hoverinfo="text",
                                  marker=dict(symbol="square", size=12, color=[dist[k] for k in reached], colorscale=C.COLORS["layers"], cmin=0, cmax=top, line=dict(width=1.5, color="#222"))))
     for on, sym, name in ((True, "circle", "Auftrag mit Partner"), (False, "circle-open", "Auftrag frei")):
         idx = [k for k in range(sc.m) if (k in matched_o) == on]
         if idx:
             fig.add_trace(go.Scatter(x=[sc.orders[k][0] for k in idx], y=[sc.orders[k][1] for k in idx], mode="markers+text" if small else "markers", name=name,
-                                     text=[f"A{k + 1}" for k in idx] if small else None, textposition="bottom center", hovertext=[f"Auftrag {k + 1}" for k in idx], hoverinfo="text",
+                                     text=[f"A{k + 1}" for k in idx] if small else None, textposition=tpos_o, hovertext=[f"Auftrag {k + 1}" for k in idx], hoverinfo="text",
                                      marker=dict(symbol=sym, size=10 if on else 11, color=C.COLORS["order"], line=dict(width=2, color=C.COLORS["order"]))))
     if on_path:
         idx = sorted(on_path)
@@ -164,7 +219,7 @@ def build_layer_map(sc, pairs, phase, stage, height=430):
     if dead:
         fig.add_trace(go.Scatter(x=[sc.vehicles[k][0] for k in dead], y=[sc.vehicles[k][1] for k in dead], mode="markers", name="Sackgasse", hovertext=[f"Fahrzeug {k + 1}: Sackgasse" for k in dead], hoverinfo="text",
                                  marker=dict(symbol="x", size=13, color=C.COLORS["dead"], line=dict(width=2, color=C.COLORS["dead"]))))
-    fig = _map_layout(fig, sc, height)
+    fig = _map_layout(fig, sc, height, layout)
     fig.update_layout(showlegend=False)          # die Legende würde in schmalen Spalten die Zeichenfläche auf fast null drücken; die Farben stehen in der Erklärung unter der Karte
     return fig
 
